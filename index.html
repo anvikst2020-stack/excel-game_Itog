@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Excel-гонка — Функции ссылок и массивов</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: linear-gradient(135deg, #0a1929 0%, #0d2847 50%, #1a3a6c 100%);
+    min-height: 100vh; color: #e3f2fd; padding: 20px; overflow-x: hidden;
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+
+  .screen { display: none; animation: fadeIn .5s ease; }
+  .screen.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+
+  .title-block {
+    text-align: center; padding: 40px 20px;
+    background: rgba(13, 40, 71, 0.6); border-radius: 20px;
+    backdrop-filter: blur(10px); border: 1px solid rgba(79, 195, 247, 0.25);
+    margin-bottom: 25px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(79, 195, 247, 0.1);
+  }
+  .title-block h1 {
+    font-size: 3em;
+    background: linear-gradient(90deg, #4fc3f7, #81d4fa, #b3e5fc, #4fc3f7);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 10px;
+    filter: drop-shadow(0 0 20px rgba(79, 195, 247, 0.4));
+  }
+  .title-block .subtitle { font-size: 1.2em; opacity: .9; color: #b3e5fc; }
+  .car-emoji { font-size: 4em; animation: bounce 1.5s infinite; display: inline-block; }
+  @keyframes bounce {
+    0%,100% { transform: translateY(0) rotate(-5deg); }
+    50% { transform: translateY(-15px) rotate(5deg); }
+  }
+
+  .start-form {
+    background: rgba(13, 40, 71, 0.6); padding: 30px;
+    border-radius: 20px; max-width: 500px; margin: 0 auto;
+    border: 1px solid rgba(79, 195, 247, 0.25);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  }
+  .start-form label { display: block; margin-bottom: 8px; font-weight: bold; color: #b3e5fc; }
+  .start-form input {
+    width: 100%; padding: 14px; border-radius: 10px;
+    border: 2px solid rgba(79, 195, 247, 0.3);
+    background: rgba(10, 25, 41, 0.6); color: #e3f2fd;
+    font-size: 1.1em; margin-bottom: 15px;
+  }
+  .start-form input::placeholder { color: rgba(179, 229, 252, 0.5); }
+  .start-form input:focus { outline: none; border-color: #4fc3f7; box-shadow: 0 0 15px rgba(79, 195, 247, 0.3); }
+
+  .btn {
+    padding: 14px 30px; border: none; border-radius: 10px;
+    font-weight: bold; cursor: pointer; font-size: 1.1em;
+    transition: all .25s; color: #fff;
+  }
+  .btn:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,.4); }
+  .btn-start {
+    background: linear-gradient(135deg, #1976d2, #4fc3f7);
+    width: 100%; font-size: 1.3em; padding: 16px;
+    box-shadow: 0 5px 20px rgba(25, 118, 210, 0.5);
+  }
+  .btn-primary { background: linear-gradient(135deg, #0288d1, #29b6f6); }
+  .btn-secondary { background: linear-gradient(135deg, #1565c0, #1e88e5); }
+  .btn-excel { background: linear-gradient(135deg, #0d47a1, #1976d2); }
+  .btn-copy { background: linear-gradient(135deg, #0277bd, #039be5); }
+
+  .rules-box {
+    background: rgba(10, 25, 41, 0.5); padding: 20px;
+    border-radius: 15px; margin-top: 20px;
+    border-left: 4px solid #4fc3f7;
+  }
+  .rules-box h3 { margin-bottom: 10px; color: #4fc3f7; }
+  .rules-box ul { list-style: none; }
+  .rules-box li { padding: 6px 0; padding-left: 25px; position: relative; }
+  .rules-box li:before { content: "🏁"; position: absolute; left: 0; }
+
+  .game-header {
+    display: flex; justify-content: space-between; align-items: center;
+    background: rgba(13, 40, 71, 0.6); padding: 15px 25px;
+    border-radius: 15px; margin-bottom: 20px;
+    flex-wrap: wrap; gap: 10px;
+    border: 1px solid rgba(79, 195, 247, 0.2);
+  }
+  .stat {
+    text-align: center; padding: 8px 20px;
+    background: rgba(10, 25, 41, 0.6); border-radius: 10px; min-width: 100px;
+    border: 1px solid rgba(79, 195, 247, 0.15);
+  }
+  .stat-label { font-size: .8em; opacity: .8; text-transform: uppercase; color: #81d4fa; }
+  .stat-value { font-size: 1.5em; font-weight: bold; color: #4fc3f7; }
+
+  .race-track {
+    background: linear-gradient(180deg, #0d2847 0%, #1a3a6c 50%, #0d2847 100%);
+    height: 90px; border-radius: 15px; position: relative;
+    margin-bottom: 25px; overflow: hidden;
+    border: 3px solid #0a1929;
+    box-shadow: inset 0 0 30px rgba(0,0,0,.6), 0 0 20px rgba(79, 195, 247, 0.1);
+  }
+  .road-lines {
+    position: absolute; top: 50%; left: 0; right: 0; height: 4px;
+    background: repeating-linear-gradient(90deg, #4fc3f7 0 30px, transparent 30px 60px);
+    transform: translateY(-50%); animation: roadMove 1s linear infinite;
+    opacity: 0.6;
+  }
+  @keyframes roadMove { from { background-position: 0 0; } to { background-position: -60px 0; } }
+  .finish-flag {
+    position: absolute; right: 10px; top: 50%;
+    transform: translateY(-50%); font-size: 2.5em; z-index: 2;
+  }
+  .race-car {
+    position: absolute; left: 10px; top: 50%;
+    transform: translateY(-50%); font-size: 2.8em;
+    transition: left .8s cubic-bezier(.4,1.6,.5,1);
+    z-index: 3; filter: drop-shadow(0 3px 8px rgba(79, 195, 247, 0.6));
+  }
+  .race-car.shake { animation: carShake .5s; }
+  @keyframes carShake {
+    0%,100% { transform: translateY(-50%) translateX(0); }
+    25% { transform: translateY(-50%) translateX(-8px) rotate(-5deg); }
+    75% { transform: translateY(-50%) translateX(8px) rotate(5deg); }
+  }
+  .race-car.boost { animation: carBoost .6s; }
+  @keyframes carBoost {
+    0% { transform: translateY(-50%) scale(1); }
+    50% { transform: translateY(-50%) scale(1.3); filter: drop-shadow(0 0 20px #4fc3f7); }
+    100% { transform: translateY(-50%) scale(1); }
+  }
+  .progress-markers {
+    position: absolute; top: 5px; left: 0; right: 0;
+    display: flex; justify-content: space-between;
+    padding: 0 10px; font-size: .7em;
+    color: rgba(179, 229, 252, 0.5); z-index: 1;
+  }
+
+  .question-card {
+    background: rgba(13, 40, 71, 0.6); padding: 30px;
+    border-radius: 20px; margin-bottom: 20px;
+    border: 1px solid rgba(79, 195, 247, 0.25);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  }
+  .question-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 20px; flex-wrap: wrap; gap: 15px;
+  }
+  .question-number {
+    background: linear-gradient(135deg, #1976d2, #4fc3f7);
+    padding: 6px 16px; border-radius: 20px;
+    font-weight: bold; font-size: .95em;
+    box-shadow: 0 3px 10px rgba(25, 118, 210, 0.4);
+  }
+  .question-type-badge {
+    padding: 4px 12px; border-radius: 15px;
+    font-size: .85em; font-weight: bold;
+    background: rgba(79, 195, 247, 0.2);
+    color: #b3e5fc;
+    border: 1px solid rgba(79, 195, 247, 0.3);
+  }
+  .timer-circle { width: 80px; height: 80px; position: relative; }
+  .timer-circle svg { transform: rotate(-90deg); }
+  .timer-circle circle { fill: none; stroke-width: 8; }
+  .timer-bg { stroke: rgba(79, 195, 247, 0.15); }
+  .timer-progress {
+    stroke: #4fc3f7; stroke-linecap: round;
+    transition: stroke-dashoffset 1s linear, stroke .3s;
+  }
+  .timer-text {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    font-size: 1.4em; font-weight: bold; color: #b3e5fc;
+  }
+  .timer-danger .timer-progress { stroke: #ef5350; }
+  .timer-danger .timer-text { color: #ef5350; animation: pulse .5s infinite; }
+  @keyframes pulse { 0%,100% { transform: translate(-50%,-50%) scale(1); } 50% { transform: translate(-50%,-50%) scale(1.15); } }
+
+  .question-text {
+    font-size: 1.3em; line-height: 1.5; margin-bottom: 25px;
+    padding: 15px; background: rgba(10, 25, 41, 0.5);
+    border-radius: 12px; border-left: 4px solid #4fc3f7;
+    color: #e3f2fd;
+  }
+  .question-text code {
+    background: rgba(79, 195, 247, 0.15); padding: 2px 8px;
+    border-radius: 5px; color: #4fc3f7;
+    font-family: 'Consolas', monospace;
+  }
+  .question-text .blank {
+    display: inline-block; min-width: 80px;
+    border-bottom: 2px dashed #4fc3f7;
+    padding: 0 8px; margin: 0 4px;
+    color: #4fc3f7; font-weight: bold;
+  }
+  .multi-hint {
+    background: rgba(79, 195, 247, 0.1); color: #b3e5fc;
+    padding: 8px 14px; border-radius: 8px;
+    margin-bottom: 15px; font-size: .95em;
+    border-left: 3px solid #4fc3f7;
+  }
+
+  .answers { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .answers.single { grid-template-columns: 1fr 1fr; }
+  .answers.multiple { grid-template-columns: 1fr; }
+  .answers.truefalse { grid-template-columns: 1fr 1fr; max-width: 500px; margin: 0 auto; }
+  .answers.fill { grid-template-columns: 1fr 1fr; }
+
+  .answer-btn {
+    padding: 16px 20px; background: rgba(10, 25, 41, 0.5);
+    border: 2px solid rgba(79, 195, 247, 0.25); border-radius: 12px;
+    color: #e3f2fd; cursor: pointer; font-size: 1em;
+    text-align: left; transition: all .2s; font-family: inherit;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .answer-btn:hover:not(:disabled) {
+    background: rgba(79, 195, 247, 0.15); border-color: #4fc3f7;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(79, 195, 247, 0.2);
+  }
+  .answer-btn:disabled { cursor: not-allowed; }
+  .answer-btn.correct {
+    background: linear-gradient(135deg, #00897b, #26a69a);
+    border-color: #26a69a; animation: correctFlash .6s;
+  }
+  .answer-btn.wrong {
+    background: linear-gradient(135deg, #c62828, #e53935);
+    border-color: #e53935; animation: wrongFlash .6s;
+  }
+  .answer-btn.selected {
+    background: rgba(79, 195, 247, 0.2); border-color: #4fc3f7;
+    box-shadow: 0 0 15px rgba(79, 195, 247, 0.3);
+  }
+  @keyframes correctFlash {
+    0% { box-shadow: 0 0 0 0 rgba(38, 166, 154, 0.8); }
+    100% { box-shadow: 0 0 0 20px rgba(38, 166, 154, 0); }
+  }
+  @keyframes wrongFlash {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-8px); }
+    75% { transform: translateX(8px); }
+  }
+  .answer-letter {
+    display: inline-flex; width: 32px; height: 32px;
+    background: rgba(79, 195, 247, 0.2); border-radius: 50%;
+    align-items: center; justify-content: center;
+    font-weight: bold; flex-shrink: 0; color: #b3e5fc;
+  }
+  .answer-checkbox {
+    width: 24px; height: 24px;
+    border: 2px solid rgba(79, 195, 247, 0.5);
+    border-radius: 6px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .2s;
+  }
+  .answer-btn.selected .answer-checkbox {
+    background: #4fc3f7; border-color: #4fc3f7;
+  }
+  .answer-btn.selected .answer-checkbox::after {
+    content: "✓"; color: #0a1929; font-weight: bold; font-size: 1.2em;
+  }
+  .answer-text { flex: 1; }
+
+  .confirm-btn-wrap { text-align: center; margin-top: 15px; }
+  .btn-confirm {
+    padding: 12px 30px; background: linear-gradient(135deg, #1976d2, #4fc3f7);
+    border: none; border-radius: 10px; color: #fff;
+    font-weight: bold; cursor: pointer; font-size: 1.05em;
+    transition: all .2s;
+    box-shadow: 0 5px 15px rgba(25, 118, 210, 0.4);
+  }
+  .btn-confirm:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(79, 195, 247, 0.5); }
+  .btn-confirm:disabled { opacity: .5; cursor: not-allowed; }
+
+  .feedback-inline {
+    margin-top: 15px; padding: 15px; border-radius: 10px;
+    text-align: center; font-weight: bold; font-size: 1.1em; display: none;
+  }
+  .feedback-inline.show { display: block; animation: fadeIn .3s; }
+  .feedback-inline.success { background: rgba(38, 166, 154, 0.2); border: 2px solid #26a69a; color: #80cbc4; }
+  .feedback-inline.fail { background: rgba(229, 57, 53, 0.2); border: 2px solid #e53935; color: #ef9a9a; }
+  .feedback-inline.partial { background: rgba(255, 213, 79, 0.15); border: 2px solid #ffd54f; color: #ffd54f; }
+
+  .results-card {
+    background: rgba(13, 40, 71, 0.6); padding: 40px;
+    border-radius: 20px; text-align: center;
+    border: 1px solid rgba(79, 195, 247, 0.25);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+  }
+  .trophy { font-size: 5em; animation: trophySpin 2s ease-out; }
+  @keyframes trophySpin {
+    0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+    100% { transform: scale(1) rotate(0); opacity: 1; }
+  }
+  .final-score {
+    font-size: 3.5em; font-weight: bold;
+    background: linear-gradient(90deg, #4fc3f7, #81d4fa, #b3e5fc);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin: 15px 0;
+    filter: drop-shadow(0 0 15px rgba(79, 195, 247, 0.5));
+  }
+  .grade-badge {
+    display: inline-block; padding: 10px 30px;
+    border-radius: 30px; font-size: 1.5em;
+    font-weight: bold; margin-bottom: 20px; color: #fff;
+  }
+  .grade-2 { background: linear-gradient(135deg, #c62828, #e53935); }
+  .grade-3 { background: linear-gradient(135deg, #ef6c00, #fb8c00); }
+  .grade-4 { background: linear-gradient(135deg, #1565c0, #1e88e5); }
+  .grade-5 { background: linear-gradient(135deg, #00897b, #26a69a); }
+
+  .results-stats {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 15px; margin: 25px 0;
+  }
+  .result-stat {
+    background: rgba(10, 25, 41, 0.6); padding: 15px; border-radius: 12px;
+    border: 1px solid rgba(79, 195, 247, 0.2);
+  }
+  .result-stat .val { font-size: 2em; font-weight: bold; color: #4fc3f7; }
+  .result-stat .lbl { font-size: .85em; opacity: .8; color: #b3e5fc; }
+
+  .send-block {
+    background: linear-gradient(135deg, rgba(13, 71, 161, 0.3), rgba(25, 118, 210, 0.3));
+    padding: 25px; border-radius: 15px; margin: 25px 0;
+    border: 2px solid #1976d2; text-align: left;
+    box-shadow: 0 5px 20px rgba(25, 118, 210, 0.2);
+  }
+  .send-block h3 { color: #4fc3f7; margin-bottom: 15px; text-align: center; font-size: 1.4em; }
+  .send-steps { margin-bottom: 20px; }
+  .send-step {
+    display: flex; align-items: flex-start;
+    padding: 12px; background: rgba(10, 25, 41, 0.5);
+    border-radius: 10px; margin-bottom: 10px; gap: 15px;
+  }
+  .step-num {
+    min-width: 35px; height: 35px;
+    background: linear-gradient(135deg, #1565c0, #1e88e5);
+    border-radius: 50%; display: flex;
+    align-items: center; justify-content: center;
+    font-weight: bold; font-size: 1.1em;
+  }
+  .step-content { flex: 1; }
+  .step-content b { color: #4fc3f7; }
+  .send-buttons { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 15px; }
+  .mail-services {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    justify-content: center; margin-top: 10px;
+  }
+  .mail-btn {
+    padding: 8px 16px; border-radius: 8px;
+    background: rgba(79, 195, 247, 0.1); border: 1px solid rgba(79, 195, 247, 0.3);
+    color: #b3e5fc; cursor: pointer; font-size: .9em;
+    transition: all .2s; text-decoration: none; display: inline-block;
+  }
+  .mail-btn:hover { background: rgba(79, 195, 247, 0.25); transform: translateY(-2px); }
+  .copy-status { margin-top: 10px; text-align: center; font-weight: bold; min-height: 24px; color: #4fc3f7; }
+
+  .leaderboard {
+    background: rgba(10, 25, 41, 0.5); padding: 20px;
+    border-radius: 15px; margin: 25px 0; text-align: left;
+    border: 1px solid rgba(79, 195, 247, 0.2);
+  }
+  .leaderboard h3 { margin-bottom: 15px; color: #4fc3f7; text-align: center; }
+  .leader-row {
+    display: flex; justify-content: space-between;
+    padding: 10px 15px; background: rgba(13, 40, 71, 0.5);
+    border-radius: 8px; margin-bottom: 6px; align-items: center;
+    border: 1px solid rgba(79, 195, 247, 0.1);
+  }
+  .leader-row.current {
+    background: linear-gradient(90deg, rgba(79, 195, 247, 0.2), rgba(129, 212, 250, 0.2));
+    border: 1px solid #4fc3f7;
+    box-shadow: 0 0 15px rgba(79, 195, 247, 0.3);
+  }
+  .leader-rank { font-weight: bold; font-size: 1.2em; min-width: 40px; }
+  .leader-rank.gold { color: #ffd54f; }
+  .leader-rank.silver { color: #b0bec5; }
+  .leader-rank.bronze { color: #a1887f; }
+  .leader-name { flex: 1; margin-left: 10px; color: #e3f2fd; }
+  .leader-score { font-weight: bold; color: #4fc3f7; }
+
+  .result-buttons { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+
+  @media (max-width: 700px) {
+    .answers, .answers.single, .answers.fill { grid-template-columns: 1fr; }
+    .title-block h1 { font-size: 2em; }
+    .results-stats { grid-template-columns: 1fr; }
+    .question-text { font-size: 1.1em; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="screen active" id="startScreen">
+    <div class="title-block">
+      <div class="car-emoji">🏎️</div>
+      <h1>EXCEL-ГОНКА</h1>
+      <div class="subtitle">Функции ссылок и массивов</div>
+    </div>
+
+    <div class="start-form">
+      <label for="playerName">👤 Введите ваше имя:</label>
+      <input type="text" id="playerName" placeholder="Например: Иванов И." maxlength="30">
+      <label for="playerGroup">🎓 Группа (необязательно):</label>
+      <input type="text" id="playerGroup" placeholder="Например: ИС-21" maxlength="20">
+      <button class="btn btn-start" onclick="startGame()">🏁 СТАРТ</button>
+
+      <div class="rules-box">
+        <h3>📋 Правила гонки</h3>
+        <ul>
+          <li>20 вопросов разных типов в случайном порядке</li>
+          <li>20 секунд на каждый ответ</li>
+          <li>+10 баллов за правильный ответ</li>
+          <li>Бонус до +10 за скорость</li>
+          <li>Оценка по 10-балльной шкале</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen" id="gameScreen">
+    <div class="game-header">
+      <div class="stat">
+        <div class="stat-label">Вопрос</div>
+        <div class="stat-value"><span id="qNum">1</span>/20</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Баллы</div>
+        <div class="stat-value" id="score">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Правильных</div>
+        <div class="stat-value"><span id="correctCount">0</span>/20</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Игрок</div>
+        <div class="stat-value" id="playerLabel" style="font-size:1em;">—</div>
+      </div>
+    </div>
+
+    <div class="race-track">
+      <div class="progress-markers" id="progressMarkers"></div>
+      <div class="road-lines"></div>
+      <div class="finish-flag">🏁</div>
+      <div class="race-car" id="raceCar">🏎️</div>
+    </div>
+
+    <div class="question-card">
+      <div class="question-header">
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+          <div class="question-number" id="qBadge">Вопрос 1</div>
+          <div class="question-type-badge" id="qType">Тип</div>
+        </div>
+        <div class="timer-circle" id="timerCircle">
+          <svg width="80" height="80">
+            <circle class="timer-bg" cx="40" cy="40" r="34"></circle>
+            <circle class="timer-progress" id="timerProgress" cx="40" cy="40" r="34"
+                    stroke-dasharray="213.6" stroke-dashoffset="0"></circle>
+          </svg>
+          <div class="timer-text" id="timerText">20</div>
+        </div>
+      </div>
+      <div class="question-text" id="questionText">Загрузка вопроса...</div>
+      <div id="multiHint"></div>
+      <div class="answers" id="answersBox"></div>
+      <div class="confirm-btn-wrap" id="confirmWrap" style="display:none;">
+        <button class="btn-confirm" id="confirmBtn" onclick="confirmMultiple()" disabled>✓ Подтвердить ответ</button>
+      </div>
+      <div class="feedback-inline" id="feedbackInline"></div>
+    </div>
+  </div>
+
+  <div class="screen" id="resultsScreen">
+    <div class="results-card">
+      <div class="trophy" id="trophy">🏆</div>
+      <h2 style="font-size:2em;margin-bottom:10px; color:#b3e5fc;">Финиш!</h2>
+      <div id="gradeContainer"></div>
+      <div class="final-score" id="finalScore">0</div>
+      <div style="opacity:.8; color:#81d4fa;">баллов из 400</div>
+
+      <div class="results-stats">
+        <div class="result-stat">
+          <div class="val" id="rCorrect">0</div>
+          <div class="lbl">Правильных</div>
+        </div>
+        <div class="result-stat">
+          <div class="val" id="rAccuracy">0%</div>
+          <div class="lbl">Точность</div>
+        </div>
+        <div class="result-stat">
+          <div class="val" id="rAvgTime">0 с</div>
+          <div class="lbl">Среднее время</div>
+        </div>
+      </div>
+
+      <div class="send-block">
+        <h3>📧 Отправка результата преподавателю</h3>
+        <div class="send-steps">
+          <div class="send-step"><div class="step-num">1</div><div class="step-content"><b>Скачайте файл</b> в формате Excel (.xls).</div></div>
+          <div class="send-step"><div class="step-num">2</div><div class="step-content"><b>Скопируйте текст письма</b> одной кнопкой.</div></div>
+          <div class="send-step"><div class="step-num">3</div><div class="step-content"><b>Откройте веб-почту</b> (Gmail, Mail.ru, Яндекс).</div></div>
+          <div class="send-step"><div class="step-num">4</div><div class="step-content"><b>Вставьте текст</b> (Ctrl+V) и <b>прикрепите файл</b>.</div></div>
+        </div>
+        <div class="send-buttons">
+          <button class="btn btn-excel" onclick="downloadExcel()">📊 Скачать Excel-файл</button>
+          <button class="btn btn-copy" onclick="copyEmailText()">📋 Копировать текст письма</button>
+        </div>
+        <div class="copy-status" id="copyStatus"></div>
+        <div style="text-align:center; margin-top:15px; opacity:.85;">
+          <small style="color:#81d4fa;">Быстрое открытие веб-почты:</small>
+          <div class="mail-services">
+            <a class="mail-btn" href="#" onclick="openWebMail('gmail'); return false;">📧 Gmail</a>
+            <a class="mail-btn" href="#" onclick="openWebMail('mailru'); return false;">📧 Mail.ru</a>
+            <a class="mail-btn" href="#" onclick="openWebMail('yandex'); return false;">📧 Яндекс</a>
+            <a class="mail-btn" href="#" onclick="openWebMail('rambler'); return false;">📧 Rambler</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="leaderboard">
+        <h3>🏆 Таблица лидеров</h3>
+        <div id="leaderList"></div>
+      </div>
+
+      <div class="result-buttons">
+        <button class="btn btn-primary" onclick="restartGame()">🔄 Играть снова</button>
+        <button class="btn btn-secondary" onclick="showStart()">🏠 На главную</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ================== НАСТРОЙКИ ПРЕПОДАВАТЕЛЯ ==================
+const TEACHER_EMAIL = "prepodavitel@example.ru";
+const TEACHER_NAME = "Преподаватель";
+const COURSE_NAME = "Функции ссылок и массивов";
+
+// ================== БАНК ВОПРОСОВ ==================
+const questions = [
+  { type: 'single', q: 'Какая функция выполняет <b>вертикальный</b> поиск значения в таблице?',
+    a: ['ВПР', 'ГПР', 'ПОИСКПОЗ', 'ИНДЕКС'], correct: 0 },
+  { type: 'single', q: 'Что означает последний аргумент <code>0</code> в функции <code>ВПР(...;0)</code>?',
+    a: ['Приблизительное совпадение', 'Точное совпадение', 'Обратный порядок', 'Игнорировать регистр'], correct: 1 },
+  { type: 'single', q: 'Что возвращает функция <code>ПОИСКПОЗ</code>?',
+    a: ['Значение ячейки', 'Адрес ячейки', 'Позицию (номер) элемента в диапазоне', 'Сумму диапазона'], correct: 2 },
+  { type: 'single', q: 'Что делает функция <code>ТРАНСП</code>?',
+    a: ['Транспортирует данные', 'Преобразует текст', 'Сортирует массив', 'Транспонирует массив (строки ↔ столбцы)'], correct: 3 },
+  { type: 'single', q: 'Что делает функция <code>ИНДЕКС</code>?',
+    a: ['Возвращает значение по номеру строки и столбца', 'Создаёт индекс документа', 'Индексирует ячейки', 'Сортирует диапазон'], correct: 0 },
+  { type: 'single', q: 'Какая функция суммирует ячейки по <b>одному</b> условию?',
+    a: ['СУММЕСЛИ', 'СУММ', 'СРЗНАЧ', 'СУММЕСЛИМН'], correct: 0 },
+  { type: 'single', q: 'Что возвращает функция <code>СТРОКА(A5)</code>?',
+    a: ['5', 'A', 'A5', '1'], correct: 0 },
+  { type: 'single', q: 'Какую ошибку вернёт ВПР, если значение не найдено?',
+    a: ['#Н/Д', '#ЗНАЧ!', '#ДЕЛ/0!', '#ССЫЛКА!'], correct: 0 },
+  { type: 'single', q: 'Какая функция суммирует ячейки по <b>двум и более</b> условиям?',
+    a: ['СУММЕСЛИ', 'СУММЕСЛИМН', 'СУММ', 'СУММ+ЕСЛИ'], correct: 1 },
+  { type: 'single', q: 'Что возвращает функция <code>СТОЛБЕЦ(D3)</code>?',
+    a: ['3', '4', 'D', 'D3'], correct: 1 },
+
+  { type: 'multiple', q: 'Какие из перечисленных функций относятся к <b>функциям поиска и ссылок</b> в Excel?',
+    a: ['ВПР', 'СУММ', 'ГПР', 'ПОИСКПОЗ'], correctMultiple: [0, 2, 3] },
+  { type: 'multiple', q: 'Какие аргументы принимает функция <code>ВПР</code>?',
+    a: ['Искомое значение', 'Диапазон поиска', 'Номер столбца', 'Цвет ячейки'], correctMultiple: [0, 1, 2] },
+  { type: 'multiple', q: 'Какие функции позволяют суммировать данные <b>по условию</b>?',
+    a: ['СУММ', 'СУММЕСЛИ', 'СУММЕСЛИМН', 'СРЗНАЧ'], correctMultiple: [1, 2] },
+  { type: 'multiple', q: 'Какие функции возвращают <b>координаты ячейки</b> (номер строки/столбца)?',
+    a: ['СТРОКА', 'СТОЛБЕЦ', 'АДРЕС', 'ИНДЕКС'], correctMultiple: [0, 1] },
+
+  { type: 'truefalse', q: 'Функция <code>ВПР</code> может искать значение <b>только в первом столбце</b> указанного диапазона.',
+    a: ['Верно', 'Неверно'], correct: 0 },
+  { type: 'truefalse', q: 'Функция <code>ПОИСКПОЗ</code> возвращает <b>значение</b> ячейки, а не её номер.',
+    a: ['Верно', 'Неверно'], correct: 1 },
+  { type: 'truefalse', q: 'В русской локали Excel аргументы функций разделяются <b>точкой с запятой</b> (<code>;</code>).',
+    a: ['Верно', 'Неверно'], correct: 0 },
+
+  { type: 'fill', q: 'Вставьте нужную функцию в формулу:<br><code>=<span class="blank">___</span>(D1; A2:B10; 2; 0)</code><br>Формула ищет значение из D1 в таблице A2:B10.',
+    a: ['ВПР', 'ГПР', 'ИНДЕКС', 'ПОИСКПОЗ'], correct: 0 },
+  { type: 'fill', q: 'Вставьте нужную функцию:<br><code>=<span class="blank">___</span>(A2:A20; "Москва"; B2:B20)</code><br>Формула суммирует продажи только по городу "Москва".',
+    a: ['СУММ', 'СУММЕСЛИ', 'СУММЕСЛИМН', 'СЧЁТЕСЛИ'], correct: 1 },
+  { type: 'fill', q: 'Вставьте нужную функцию:<br><code>=<span class="blank">___</span>(A2:C10; 3; 2)</code><br>Формула возвращает значение из 3-й строки и 2-го столбца диапазона.',
+    a: ['ВПР', 'ПОИСКПОЗ', 'ИНДЕКС', 'СМЕЩ'], correct: 2 }
+];
+
+// ================== ПЕРЕМЕШИВАНИЕ ==================
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function shuffleOptions(question) {
+  const q = JSON.parse(JSON.stringify(question));
+  if (q.type === 'multiple') {
+    const items = q.a.map((text, i) => ({ text, isCorrect: q.correctMultiple.includes(i) }));
+    for (let i = items.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [items[i], items[j]] = [items[j], items[i]];
+    }
+    q.a = items.map(it => it.text);
+    q.correctMultiple = items.map((it, i) => it.isCorrect ? i : -1).filter(i => i !== -1);
+    return q;
+  } else {
+    const items = q.a.map((text, i) => ({ text, isCorrect: i === q.correct }));
+    for (let i = items.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [items[i], items[j]] = [items[j], items[i]];
+    }
+    q.a = items.map(it => it.text);
+    q.correct = items.findIndex(it => it.isCorrect);
+    return q;
+  }
+}
+
+// ================== СОСТОЯНИЕ ==================
+const TIMER_DURATION = 20;
+const TIMER_CIRC = 2 * Math.PI * 34;
+let state = {
+  playerName: '', playerGroup: '',
+  currentQ: 0, score: 0, correct: 0,
+  timeLeft: TIMER_DURATION, timerId: null,
+  questionStartTime: 0, totalTimeSpent: 0,
+  answered: false, startTime: null, endTime: null,
+  currentQuestion: null, selectedMultiple: new Set(),
+  shuffledQuestions: [] // перемешанный список вопросов
+};
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function showStart() { showScreen('startScreen'); }
+
+function startGame() {
+  const name = document.getElementById('playerName').value.trim() || 'Гонщик ' + Math.floor(Math.random()*1000);
+  const group = document.getElementById('playerGroup').value.trim() || '';
+  
+  // ПЕРЕМЕШИВАЕМ ВОПРОСЫ СЛУЧАЙНЫМ ОБРАЗОМ
+  const shuffled = shuffleArray(questions);
+  
+  state = {
+    playerName: name, playerGroup: group,
+    currentQ: 0, score: 0, correct: 0,
+    timeLeft: TIMER_DURATION, timerId: null,
+    questionStartTime: Date.now(), totalTimeSpent: 0,
+    answered: false, startTime: new Date(), endTime: null,
+    currentQuestion: null, selectedMultiple: new Set(),
+    shuffledQuestions: shuffled
+  };
+  document.getElementById('playerLabel').textContent = name;
+  document.getElementById('score').textContent = '0';
+  document.getElementById('correctCount').textContent = '0';
+  buildProgressMarkers();
+  moveCar(0);
+  showScreen('gameScreen');
+  loadQuestion();
+}
+
+function buildProgressMarkers() {
+  const box = document.getElementById('progressMarkers');
+  box.innerHTML = '';
+  for (let i = 0; i <= 20; i++) {
+    const m = document.createElement('span');
+    m.textContent = i;
+    box.appendChild(m);
+  }
+}
+
+function loadQuestion() {
+  if (state.currentQ >= state.shuffledQuestions.length) { endGame(); return; }
+  
+  // Берём перемешанный вопрос и перемешиваем варианты
+  state.currentQuestion = shuffleOptions(state.shuffledQuestions[state.currentQ]);
+  const q = state.currentQuestion;
+  state.answered = false;
+  state.selectedMultiple = new Set();
+  state.timeLeft = TIMER_DURATION;
+  state.questionStartTime = Date.now();
+
+  document.getElementById('qNum').textContent = state.currentQ + 1;
+  document.getElementById('qBadge').textContent = `Вопрос ${state.currentQ + 1}`;
+  document.getElementById('questionText').innerHTML = q.q;
+
+  const typeNames = {
+    single: '🔘 Один ответ', multiple: '☑️ Несколько ответов',
+    truefalse: '✔️ Верно / Неверно', fill: '✍️ Заполнить пропуск'
+  };
+  document.getElementById('qType').textContent = typeNames[q.type];
+
+  const hintBox = document.getElementById('multiHint');
+  if (q.type === 'multiple') {
+    hintBox.innerHTML = `<div class="multi-hint">💡 Выберите <b>все правильные варианты</b> и нажмите «Подтвердить ответ». За полный ответ — 10 баллов, за частичный — 5.</div>`;
+  } else { hintBox.innerHTML = ''; }
+
+  const answersBox = document.getElementById('answersBox');
+  answersBox.innerHTML = '';
+  answersBox.className = 'answers ' + q.type;
+  const letters = ['A', 'B', 'C', 'D'];
+
+  if (q.type === 'multiple') {
+    q.a.forEach((ans, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'answer-btn';
+      btn.innerHTML = `<div class="answer-checkbox"></div><div class="answer-text">${ans}</div>`;
+      btn.onclick = () => toggleMultiple(i, btn);
+      answersBox.appendChild(btn);
+    });
+    document.getElementById('confirmWrap').style.display = 'block';
+    document.getElementById('confirmBtn').disabled = true;
+  } else {
+    document.getElementById('confirmWrap').style.display = 'none';
+    q.a.forEach((ans, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'answer-btn';
+      const marker = (q.type === 'truefalse')
+        ? (i === 0 ? '✅' : '❌')
+        : `<span class="answer-letter">${letters[i]}</span>`;
+      btn.innerHTML = `${marker}<div class="answer-text">${ans}</div>`;
+      btn.onclick = () => selectSingle(i, btn);
+      answersBox.appendChild(btn);
+    });
+  }
+
+  document.getElementById('feedbackInline').className = 'feedback-inline';
+  document.getElementById('feedbackInline').innerHTML = '';
+  startTimer();
+}
+
+// ================== ОТВЕТ (single / truefalse / fill) ==================
+function selectSingle(idx, btn) {
+  if (state.answered) return;
+  state.answered = true;
+  clearInterval(state.timerId);
+  const timeSpent = (Date.now() - state.questionStartTime) / 1000;
+  state.totalTimeSpent += timeSpent;
+  const q = state.currentQuestion;
+  const isCorrect = idx === q.correct;
+  const btns = document.querySelectorAll('.answer-btn');
+  btns.forEach(b => b.disabled = true);
+  const car = document.getElementById('raceCar');
+
+  if (isCorrect) {
+    btn.classList.add('correct');
+    state.correct++;
+    const speedBonus = Math.max(0, Math.round((TIMER_DURATION - timeSpent) / 2));
+    const gained = 10 + speedBonus;
+    state.score += gained;
+    document.getElementById('score').textContent = state.score;
+    document.getElementById('correctCount').textContent = state.correct;
+    // БЕЗ ПОДСКАЗКИ — только факт правильности
+    showFeedback('success', `✅ Верно! +${gained} баллов`);
+    moveCar(state.correct);
+    car.classList.add('boost');
+    setTimeout(() => car.classList.remove('boost'), 600);
+  } else {
+    btn.classList.add('wrong');
+    // НЕ ПОКАЗЫВАЕМ правильный ответ
+    showFeedback('fail', `❌ Неверно`);
+    car.classList.add('shake');
+    setTimeout(() => car.classList.remove('shake'), 500);
+  }
+  setTimeout(nextQuestion, 1800);
+}
+
+// ================== MULTIPLE ==================
+function toggleMultiple(idx, btn) {
+  if (state.answered) return;
+  if (state.selectedMultiple.has(idx)) {
+    state.selectedMultiple.delete(idx);
+    btn.classList.remove('selected');
+  } else {
+    state.selectedMultiple.add(idx);
+    btn.classList.add('selected');
+  }
+  document.getElementById('confirmBtn').disabled = state.selectedMultiple.size === 0;
+}
+
+function confirmMultiple() {
+  if (state.answered || state.selectedMultiple.size === 0) return;
+  state.answered = true;
+  clearInterval(state.timerId);
+  const timeSpent = (Date.now() - state.questionStartTime) / 1000;
+  state.totalTimeSpent += timeSpent;
+  const q = state.currentQuestion;
+  const btns = document.querySelectorAll('.answer-btn');
+  btns.forEach(b => b.disabled = true);
+  document.getElementById('confirmBtn').disabled = true;
+  const selected = Array.from(state.selectedMultiple).sort();
+  const correct = [...q.correctMultiple].sort();
+  const car = document.getElementById('raceCar');
+  const isFullCorrect = selected.length === correct.length && selected.every((v, i) => v === correct[i]);
+  const isPartial = !isFullCorrect && selected.every(i => correct.includes(i)) && selected.length > 0;
+
+  if (isFullCorrect) {
+    selected.forEach(i => btns[i].classList.add('correct'));
+    state.correct++;
+    const speedBonus = Math.max(0, Math.round((TIMER_DURATION - timeSpent) / 2));
+    const gained = 10 + speedBonus;
+    state.score += gained;
+    document.getElementById('score').textContent = state.score;
+    document.getElementById('correctCount').textContent = state.correct;
+    showFeedback('success', `✅ Полностью верно! +${gained} баллов`);
+    moveCar(state.correct);
+    car.classList.add('boost');
+    setTimeout(() => car.classList.remove('boost'), 600);
+  } else if (isPartial) {
+    selected.forEach(i => btns[i].classList.add('correct'));
+    state.score += 5;
+    document.getElementById('score').textContent = state.score;
+    showFeedback('partial', `⚠️ Частично верно (+5 баллов)`);
+  } else {
+    selected.forEach(i => {
+      if (correct.includes(i)) btns[i].classList.add('correct');
+      else btns[i].classList.add('wrong');
+    });
+    showFeedback('fail', `❌ Неверно`);
+    car.classList.add('shake');
+    setTimeout(() => car.classList.remove('shake'), 500);
+  }
+  setTimeout(nextQuestion, 1800);
+}
+
+// ================== ТАЙМЕР ==================
+function startTimer() {
+  clearInterval(state.timerId);
+  const progress = document.getElementById('timerProgress');
+  const text = document.getElementById('timerText');
+  const circle = document.getElementById('timerCircle');
+  progress.style.strokeDasharray = TIMER_CIRC;
+  progress.style.strokeDashoffset = 0;
+  circle.classList.remove('timer-danger');
+
+  state.timerId = setInterval(() => {
+    state.timeLeft--;
+    text.textContent = state.timeLeft;
+    const offset = TIMER_CIRC * (1 - state.timeLeft / TIMER_DURATION);
+    progress.style.strokeDashoffset = offset;
+    if (state.timeLeft <= 5) circle.classList.add('timer-danger');
+    if (state.timeLeft <= 0) {
+      clearInterval(state.timerId);
+      if (!state.answered) timeOut();
+    }
+  }, 1000);
+}
+
+function timeOut() {
+  state.answered = true;
+  const btns = document.querySelectorAll('.answer-btn');
+  btns.forEach(b => b.disabled = true);
+  document.getElementById('confirmBtn').disabled = true;
+  // БЕЗ ПОДСКАЗКИ правильного ответа
+  showFeedback('fail', `⏰ Время вышло!`);
+  const car = document.getElementById('raceCar');
+  car.classList.add('shake');
+  setTimeout(() => car.classList.remove('shake'), 500);
+  setTimeout(nextQuestion, 1800);
+}
+
+function showFeedback(type, msg) {
+  const fb = document.getElementById('feedbackInline');
+  fb.className = 'feedback-inline show ' + type;
+  fb.innerHTML = msg;
+}
+
+function moveCar(correctCount) {
+  const track = document.querySelector('.race-track');
+  const car = document.getElementById('raceCar');
+  const trackWidth = track.offsetWidth - 80;
+  const step = trackWidth / 20;
+  car.style.left = (10 + step * correctCount) + 'px';
+}
+
+function nextQuestion() { state.currentQ++; loadQuestion(); }
+
+// ================== ОЦЕНКА ==================
+function calculateGrade(score) {
+  let rawGrade = Math.ceil(score / 40);
+  if (rawGrade > 10) rawGrade = 10;
+  let text = '', cssClass = '';
+  if (rawGrade <= 2) { text = 'Неудовлетворительно'; cssClass = 'grade-2'; }
+  else if (rawGrade <= 4) { text = 'Слабо'; cssClass = 'grade-3'; }
+  else if (rawGrade <= 6) { text = 'Удовлетворительно'; cssClass = 'grade-4'; }
+  else if (rawGrade <= 8) { text = 'Хорошо'; cssClass = 'grade-5'; }
+  else { text = 'Отлично'; cssClass = 'grade-5'; }
+  return { grade: rawGrade, text: text, class: cssClass };
+}
+
+function endGame() {
+  clearInterval(state.timerId);
+  state.endTime = new Date();
+  const grading = calculateGrade(state.score);
+  document.getElementById('finalScore').textContent = state.score;
+  document.getElementById('gradeContainer').innerHTML =
+    `<div class="grade-badge ${grading.class}">Оценка: ${grading.grade} (${grading.text})</div>`;
+  document.getElementById('rCorrect').textContent = `${state.correct}/20`;
+  document.getElementById('rAccuracy').textContent = Math.round(state.correct / 20 * 100) + '%';
+  const avg = state.correct > 0 ? (state.totalTimeSpent / 20).toFixed(1) : '—';
+  document.getElementById('rAvgTime').textContent = avg + ' с';
+  const trophy = document.getElementById('trophy');
+  if (grading.grade >= 9) trophy.textContent = '🏆';
+  else if (grading.grade >= 7) trophy.textContent = '🥇';
+  else if (grading.grade >= 5) trophy.textContent = '🥈';
+  else if (grading.grade >= 3) trophy.textContent = '🥉';
+  else trophy.textContent = '🏁';
+  saveLeader(state.playerName, state.score, state.correct, grading.grade);
+  renderLeaders();
+  showScreen('resultsScreen');
+}
+
+// ================== EXCEL ==================
+function generateExcelXML() {
+  const grading = calculateGrade(state.score);
+  const dateStr = state.endTime.toLocaleString('ru-RU');
+  const duration = ((state.endTime - state.startTime) / 1000).toFixed(0);
+  const accuracy = Math.round(state.correct / 20 * 100);
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
+  const rows = [
+    ['ОТЧЁТ О РЕЗУЛЬТАТЕ ТЕСТИРОВАНИЯ'], [''],
+    ['Дисциплина/тема:', COURSE_NAME],
+    ['ФИО студента:', state.playerName],
+    ['Группа:', state.playerGroup || '(не указана)'],
+    ['Дата и время:', dateStr],
+    ['Время прохождения (сек):', duration], [''],
+    ['РЕЗУЛЬТАТЫ'],
+    ['Правильных ответов:', `${state.correct} из 20`],
+    ['Точность:', `${accuracy}%`],
+    ['Набранные баллы:', state.score],
+    ['Максимум баллов:', 400],
+    ['Оценка (10-балльная):', grading.grade],
+    ['Статус:', grading.text], [''],
+    ['Подпись студента:', '_________________'],
+    ['Подпись преподавателя:', '_________________']
+  ];
+  let xml = `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <Styles>
+  <Style ss:ID="header"><Font ss:Bold="1" ss:Size="14" ss:Color="#1565c0"/><Alignment ss:Horizontal="Center"/></Style>
+  <Style ss:ID="label"><Font ss:Bold="1" ss:Size="11"/></Style>
+  <Style ss:ID="value"><Font ss:Size="11"/></Style>
+  <Style ss:ID="section"><Font ss:Bold="1" ss:Size="12" ss:Color="#1976d2"/></Style>
+ </Styles>
+ <Worksheet ss:Name="Результат">
+  <Table>
+   <Column ss:Index="1" ss:Width="180"/>
+   <Column ss:Index="2" ss:Width="250"/>`;
+  rows.forEach((row, i) => {
+    xml += '<Row>';
+    row.forEach((cell, j) => {
+      let style = 'value';
+      if (i === 0) style = 'header';
+      else if (i === 8) style = 'section';
+      else if (j === 0 && String(cell).endsWith(':')) style = 'label';
+      const type = typeof cell === 'number' ? 'Number' : 'String';
+      xml += `<Cell ss:Style="${style}"><Data ss:Type="${type}">${esc(cell)}</Data></Cell>`;
+    });
+    xml += '</Row>';
+  });
+  xml += `</Table></Worksheet></Workbook>`;
+  return xml;
+}
+
+function downloadExcel() {
+  const xml = generateExcelXML();
+  const blob = new Blob([xml], { type: 'application/vnd.ms-excel;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const safeName = state.playerName.replace(/[^\wа-яА-ЯёЁ\- ]/g, '_').trim() || 'student';
+  const dateStr = state.endTime.toISOString().slice(0,10);
+  a.href = url;
+  a.download = `Результат_${safeName}_${dateStr}.xls`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  document.getElementById('copyStatus').textContent = '✅ Файл скачан! Теперь скопируйте текст письма.';
+  setTimeout(() => {
+    const s = document.getElementById('copyStatus');
+    if (s.textContent.includes('✅ Файл скачан')) s.textContent = '';
+  }, 4000);
+}
+
+function getEmailText() {
+  const grading = calculateGrade(state.score);
+  const dateStr = state.endTime.toLocaleString('ru-RU');
+  const accuracy = Math.round(state.correct / 20 * 100);
+  const groupLine = state.playerGroup ? `Группа: ${state.playerGroup}\n` : '';
+  return `Здравствуйте, ${TEACHER_NAME}!
+
+Направляю результат прохождения теста по теме "${COURSE_NAME}".
+
+=== РЕЗУЛЬТАТ ТЕСТА ===
+ФИО: ${state.playerName}
+${groupLine}Дата: ${dateStr}
+Правильных ответов: ${state.correct} из 20 (${accuracy}%)
+Набранные баллы: ${state.score} из 400
+Оценка: ${grading.grade} (${grading.text})
+========================
+
+Файл с подробным отчётом во вложении.
+
+С уважением,
+${state.playerName}`;
+}
+
+function copyEmailText() {
+  const text = getEmailText();
+  const status = document.getElementById('copyStatus');
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(() => {
+      status.textContent = '✅ Текст письма скопирован!';
+    }).catch(() => fallbackCopy(text, status));
+  } else { fallbackCopy(text, status); }
+  setTimeout(() => { if (status.textContent.includes('✅')) status.textContent = ''; }, 5000);
+}
+
+function fallbackCopy(text, statusEl) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    document.execCommand('copy');
+    statusEl.textContent = '✅ Текст письма скопирован!';
+  } catch(e) { statusEl.textContent = '❌ Не удалось скопировать.'; }
+  document.body.removeChild(ta);
+}
+
+function openWebMail(service) {
+  const subject = encodeURIComponent(`Результат теста: ${state.playerName} — ${COURSE_NAME}`);
+  const body = encodeURIComponent(getEmailText());
+  const to = encodeURIComponent(TEACHER_EMAIL);
+  let url = '';
+  switch(service) {
+    case 'gmail': url = `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${subject}&body=${body}`; break;
+    case 'mailru': url = `https://e.mail.ru/cgi-bin/compose?to=${to}&subject=${subject}&body=${body}`; break;
+    case 'yandex': url = `https://mail.yandex.ru/compose?to=${to}&subject=${subject}&body=${body}`; break;
+    case 'rambler': url = `https://mail.rambler.ru/cgi-bin/mailwrite?to=${to}&subject=${subject}&body=${body}`; break;
+  }
+  window.open(url, '_blank');
+  const status = document.getElementById('copyStatus');
+  status.textContent = '📧 Откроется веб-почта. Прикрепите скачанный файл!';
+}
+
+// ================== ЛИДЕРЫ ==================
+function getLeaders() {
+  try { return JSON.parse(localStorage.getItem('excelRaceLeaders7') || '[]'); }
+  catch(e) { return []; }
+}
+function saveLeader(name, score, correct, grade) {
+  const leaders = getLeaders();
+  leaders.push({ name, score, correct, grade, date: new Date().toLocaleDateString('ru-RU') });
+  leaders.sort((a,b) => b.score - a.score || b.correct - a.correct);
+  localStorage.setItem('excelRaceLeaders7', JSON.stringify(leaders.slice(0, 20)));
+}
+function renderLeaders() {
+  const leaders = getLeaders();
+  const list = document.getElementById('leaderList');
+  if (leaders.length === 0) {
+    list.innerHTML = '<div style="text-align:center;opacity:.6;padding:15px;">Пока нет результатов</div>';
+    return;
+  }
+  list.innerHTML = leaders.slice(0, 10).map((l, i) => {
+    const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+    const rankIcon = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i+1);
+    const isCurrent = l.name === state.playerName && l.score === state.score;
+    return `<div class="leader-row ${isCurrent ? 'current' : ''}">
+      <span class="leader-rank ${rankClass}">${rankIcon}</span>
+      <span class="leader-name">${escapeHtml(l.name)} <small style="opacity:.6">(Оц: ${l.grade})</small></span>
+      <span class="leader-score">${l.score} б.</span>
+    </div>`;
+  }).join('');
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function restartGame() {
+  document.getElementById('playerName').value = state.playerName;
+  document.getElementById('playerGroup').value = state.playerGroup;
+  startGame();
+}
+
+document.getElementById('playerName').addEventListener('keydown', e => {
+  if (e.key === 'Enter') startGame();
+});
+</script>
+</body>
+</html>
